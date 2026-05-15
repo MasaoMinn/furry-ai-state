@@ -1,0 +1,9 @@
+.gitignore
+.vscode/**
+src/**
+node_modules/**
+*.vsix
+*.tsbuildinfo
+package-lock.json
+tsconfig.json
+docs/**/*.draft.md

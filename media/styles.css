@@ -1,0 +1,106 @@
+:root {
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+  font-family: var(--vscode-font-family);
+}
+
+.app {
+  min-height: 100vh;
+  padding: 12px;
+}
+
+.state-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.image-frame {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-editor-background);
+}
+
+#state-image {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  object-fit: contain;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  margin-bottom: 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.state-label {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.connection {
+  display: inline-flex;
+  align-items: center;
+  min-width: 78px;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--vscode-descriptionForeground);
+}
+
+.app[data-connection="connected"] .dot {
+  background: var(--vscode-testing-iconPassed);
+}
+
+.app[data-connection="connecting"] .dot {
+  background: var(--vscode-testing-iconQueued);
+}
+
+.app[data-connection="disconnected"] .dot,
+.app[data-connection="disabled"] .dot {
+  background: var(--vscode-testing-iconFailed);
+}
+
+#reconnect-button {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 6px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  cursor: pointer;
+}
+
+#reconnect-button:hover {
+  background: var(--vscode-button-hoverBackground);
+}

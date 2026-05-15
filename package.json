@@ -1,0 +1,84 @@
+{
+  "name": "furry-ai-state",
+  "displayName": "Furry AI State",
+  "description": "Display AI companion state illustrations in a VSCode sidebar webview.",
+  "version": "0.1.0",
+  "publisher": "tangetsu",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:furryAiState.stateView"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Furry AI State",
+      "properties": {
+        "furry-ai-state.enabled": {
+          "type": "boolean",
+          "title": "Enable Furry AI State",
+          "description": "Connect to the AI Companion MCP Runtime local IPC bridge.",
+          "default": true
+        },
+        "furry-ai-state.ipcPath": {
+          "type": "string",
+          "title": "AI Companion IPC Path",
+          "description": "Optional IPC path. Empty uses the furry-companion-mcp platform default.",
+          "default": ""
+        },
+        "furry-ai-state.reconnectDelayMs": {
+          "type": "number",
+          "title": "Reconnect Delay",
+          "description": "Initial reconnect delay in milliseconds when the MCP runtime is not available.",
+          "default": 1000,
+          "minimum": 250,
+          "maximum": 30000
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "furryAiState",
+          "title": "Furry AI State",
+          "icon": "./assets/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "furryAiState": [
+        {
+          "id": "furryAiState.stateView",
+          "name": "AI State",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "furry-ai-state.reconnect",
+        "title": "Reconnect AI State Runtime",
+        "category": "Furry AI State"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "lint": "tsc -p . --noEmit",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.21",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.2",
+    "typescript": "^5.9.3"
+  }
+}
