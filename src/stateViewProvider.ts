@@ -91,6 +91,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       vscode.Uri.joinPath(
         this.context.extensionUri,
         "media",
+        "images",
         stateImageMap[this.state]
       )
     );

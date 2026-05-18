@@ -6,7 +6,7 @@ const vscode =
     : {
         postMessage(message) {
           console.log(message);
-        }
+        },
       };
 
 const root = document.querySelector(".app");

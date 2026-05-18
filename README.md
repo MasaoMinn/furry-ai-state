@@ -4,9 +4,9 @@ Standalone VSCode extension for displaying AI companion state illustrations in a
 
 It listens to the `furry-companion-mcp` local IPC JSON Lines bridge and maps agent states to bundled illustrations:
 
-- `thinking`, `planning`, `idle` -> `media/thinking.png`
-- `coding`, `testing`, `debugging`, `error` -> `media/building.png`
-- `success` -> `media/completed.png`
+- `thinking`, `planning`, `idle` -> `media/images/thinking.png`
+- `coding`, `testing`, `debugging`, `error` -> `media/images/building.png`
+- `success` -> `media/images/completed.png`
 
 ## Development
 

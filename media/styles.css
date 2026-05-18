@@ -25,6 +25,7 @@ body {
 
 .image-frame {
   display: grid;
+  width: 100%;
   min-height: 260px;
   place-items: center;
   overflow: hidden;
@@ -36,7 +37,6 @@ body {
 #state-image {
   display: block;
   width: 100%;
-  max-width: 360px;
   height: auto;
   object-fit: contain;
 }

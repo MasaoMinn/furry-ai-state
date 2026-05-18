@@ -29,9 +29,10 @@ furry-ai-state/
 │  ├─ protocol.ts
 │  └─ stateViewProvider.ts
 ├─ media/
-│  ├─ thinking.png
-│  ├─ building.png
-│  ├─ completed.png
+│  ├─ images/
+│  │  ├─ thinking.png
+│  │  ├─ building.png
+│  │  └─ completed.png
 │  ├─ main.js
 │  └─ styles.css
 ├─ assets/
@@ -105,9 +106,9 @@ const stateImageMap = {
 
 图片来源已重新复制到本项目：
 
-- `media/thinking.png`
-- `media/building.png`
-- `media/completed.png`
+- `media/images/thinking.png`
+- `media/images/building.png`
+- `media/images/completed.png`
 
 ## 配置项
 
