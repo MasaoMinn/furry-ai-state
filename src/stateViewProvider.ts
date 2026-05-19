@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import {
   type AgentState,
+  type CompanionStateEvent,
   type CompanionConnectionEvent,
   type CompanionConnectionStatus
 } from "./protocol";
@@ -38,7 +39,10 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = "furryAiState.stateView";
 
   private webviewView: vscode.WebviewView | null = null;
-  private state: AgentState = "idle";
+  private stateEvent: CompanionStateEvent = {
+    type: "state",
+    state: "idle"
+  };
   private connectionStatus: CompanionConnectionStatus = "connecting";
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -71,8 +75,8 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  updateState(state: AgentState): void {
-    this.state = state;
+  updateState(event: CompanionStateEvent): void {
+    this.stateEvent = event;
     this.postCurrentState();
   }
 
@@ -87,19 +91,22 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    const { state, message, file } = this.stateEvent;
     const imageUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this.context.extensionUri,
         "media",
         "images",
-        stateImageMap[this.state]
+        stateImageMap[state]
       )
     );
 
     void webview.postMessage({
       command: "state-update",
-      state: this.state,
-      stateLabel: stateLabelMap[this.state],
+      state,
+      stateLabel: stateLabelMap[state],
+      message,
+      file,
       imageUri: imageUri.toString(),
       connectionStatus: this.connectionStatus,
       connectionLabel: connectionLabelMap[this.connectionStatus]
@@ -134,10 +141,17 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
           <div>
             <div class="label">Agent State</div>
             <div id="state-label" class="state-label">Idle</div>
+            <div id="state-message" class="state-message is-hidden"></div>
           </div>
           <div class="connection">
             <span id="connection-dot" class="dot"></span>
             <span id="connection-label">Connecting</span>
+          </div>
+        </div>
+        <div class="details">
+          <div id="file-block" class="detail-block is-hidden">
+            <div class="label">Current File</div>
+            <div id="active-file" class="detail-text file-text"></div>
           </div>
         </div>
         <button id="reconnect-button" type="button">Reconnect</button>

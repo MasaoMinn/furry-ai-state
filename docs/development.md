@@ -52,10 +52,10 @@ furry-ai-state/
 - Windows: `\\.\pipe\furry-companion-mcp`
 - macOS/Linux: `/tmp/furry-companion-mcp.sock`
 
-每一行是一条 JSON：
+每一行是一条 JSON。`message` 和 `file` 为可选字段：
 
 ```json
-{"type":"state","state":"thinking"}
+{"type":"state","state":"coding","message":"Updating the webview state renderer.","file":"src/stateViewProvider.ts"}
 ```
 
 状态类型：
@@ -81,13 +81,15 @@ webview.postMessage({
   command: "state-update",
   state,
   stateLabel,
+  message,
+  file,
   imageUri,
   connectionStatus,
   connectionLabel
 });
 ```
 
-Webview 只负责渲染，不直接连接 IPC。
+Webview 只负责渲染，不直接连接 IPC。`message` 用于显示 Agent 当前正在做什么，`file` 用于显示 Agent 正在修改的代码文件。
 
 ## 插画映射
 
@@ -158,11 +160,18 @@ args = ['D:\IntegratedSourceOnDesktop\mcp-server\dist\index.js']
 
 ```ts
 set_state({ state: "thinking" })
-set_state({ state: "coding" })
-set_state({ state: "success" })
+set_state({
+  state: "coding",
+  message: "Updating the webview state renderer.",
+  file: "src/stateViewProvider.ts"
+})
+set_state({
+  state: "success",
+  message: "Implementation and verification are complete."
+})
 ```
 
-侧边栏应分别展示思考、构建、完成三张图。
+侧边栏应分别展示思考、构建、完成三张图，并显示 `message` 或当前 `file`。
 
 ## Codex MCP 配置
 

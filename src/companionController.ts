@@ -55,8 +55,16 @@ export class CompanionController implements vscode.Disposable {
     this.client = client;
     this.disposables.push(
       client.onDidChangeState((event) => {
-        this.output.appendLine(`AI Companion state: ${event.state}`);
-        this.provider.updateState(event.state);
+        const detail = [
+          event.file ? `file: ${event.file}` : undefined,
+          event.message ? `message: ${event.message}` : undefined
+        ]
+          .filter(Boolean)
+          .join(", ");
+        this.output.appendLine(
+          `AI Companion state: ${event.state}${detail ? ` (${detail})` : ""}`
+        );
+        this.provider.updateState(event);
       }),
       client.onDidChangeConnection((event) => {
         this.output.appendLine(

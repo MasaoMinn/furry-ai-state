@@ -60,6 +60,50 @@ body {
   font-weight: 700;
 }
 
+.state-message {
+  max-width: 100%;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.state-message.is-hidden {
+  display: none;
+}
+
+.details {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-block {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  background: var(--vscode-editor-background);
+}
+
+.detail-block.is-hidden {
+  display: none;
+}
+
+.detail-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--vscode-foreground);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.file-text {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 12px;
+}
+
 .connection {
   display: inline-flex;
   align-items: center;
