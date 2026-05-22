@@ -72,6 +72,7 @@ The webview also renders optional state details from the MCP runtime:
 The status text area has a top-right icon action bar:
 
 - reconnect button: posts `reconnect` to the extension host and runs `furry-ai-state.reconnect`.
+- webview position button: posts `toggle-webview-position` and switches `furry-ai-state.webviewPosition` between `sidebar` and `editor`.
 - action guide button: posts `open-docs` and opens `https://kcnhl2uub4k0.feishu.cn/wiki/JJ3KwGjRQiem5TkdTBccLeKrnJe?from=from_copylink`.
 - GitHub button: posts `open-github` and opens `https://github.com/MasaoMinn/furry-ai-state`.
 
@@ -82,11 +83,13 @@ Users can run `Furry AI State: Set Webview Position` from the command palette to
 - `sidebar`: use the contributed `AI State` sidebar webview, matching the original behavior.
 - `editor`: open the same webview in an editor tab via `vscode.window.createWebviewPanel`.
 
-Switching to `editor` clears the sidebar webview, opens the editor `WebviewPanel`, and closes the sidebar container through `workbench.action.closeSidebar`; switching to `sidebar` disposes the editor `WebviewPanel`. State updates should only be posted to the active display mode.
+Switching to `editor` clears the sidebar webview, opens the editor `WebviewPanel`, and focuses the editor area; switching to `sidebar` disposes the editor `WebviewPanel`. State updates should only be posted to the active display mode.
 
-When the user clicks the Activity Bar icon, route the visible view through `furry-ai-state.webviewPosition`: `sidebar` initializes and shows the contributed sidebar view, while `editor` opens the editor panel and closes the sidebar instead of rendering sidebar content.
+When the user clicks the Activity Bar icon, route the visible view through `furry-ai-state.webviewPosition`: `sidebar` initializes and shows the contributed sidebar view, while `editor` opens the editor panel instead of rendering sidebar content.
 
 Do not call sidebar focus commands from the sidebar visibility route when `webviewPosition` is `sidebar`; the Activity Bar click already made the view visible, and refocusing it again causes visible flicker.
+
+Do not call `workbench.action.closeSidebar` when switching to `editor`; users can move the WebviewView into built-in containers such as Explorer, and closing the entire sidebar from the view visibility route can make Explorer immediately close whenever it is opened.
 
 The command is `furry-ai-state.setWebviewPosition`. It may be called with an optional argument of `"sidebar"` or `"editor"`; without an argument it shows a Quick Pick.
 

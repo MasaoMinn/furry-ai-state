@@ -82,6 +82,8 @@ body {
 
 .action-bar {
   display: inline-flex;
+  max-width: 124px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;

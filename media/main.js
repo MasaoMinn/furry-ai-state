@@ -23,6 +23,7 @@ const fileBlock = document.querySelector("#file-block");
 const activeFile = document.querySelector("#active-file");
 const connectionLabel = document.querySelector("#connection-label");
 const reconnectButton = document.querySelector("#reconnect-button");
+const positionButton = document.querySelector("#position-button");
 const docsButton = document.querySelector("#docs-button");
 const githubButton = document.querySelector("#github-button");
 const statusRow = document.querySelector(".status-row");
@@ -51,6 +52,7 @@ window.addEventListener("message", (event) => {
     connectionLabel.textContent =
       message.connectionLabel || message.connectionStatus;
   }
+  updatePositionButton(message.webviewPosition);
   scheduleImageFrameSize();
 });
 
@@ -142,8 +144,34 @@ function getElementHeight(element) {
   return element.getBoundingClientRect().height;
 }
 
+/**
+ * @param {unknown} currentPosition
+ */
+function updatePositionButton(currentPosition) {
+  if (!positionButton) {
+    return;
+  }
+
+  const nextPosition = currentPosition === "editor" ? "sidebar" : "editor";
+  const title =
+    nextPosition === "editor"
+      ? "Switch webview to editor"
+      : "Switch webview to sidebar";
+
+  positionButton.setAttribute("title", title);
+  positionButton.setAttribute("aria-label", title);
+  positionButton.setAttribute(
+    "data-current-position",
+    currentPosition === "editor" ? "editor" : "sidebar"
+  );
+}
+
 reconnectButton?.addEventListener("click", () => {
   vscode.postMessage({ command: "reconnect" });
+});
+
+positionButton?.addEventListener("click", () => {
+  vscode.postMessage({ command: "toggle-webview-position" });
 });
 
 docsButton?.addEventListener("click", () => {

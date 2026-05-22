@@ -145,9 +145,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
 
   private async applyWebviewPosition(): Promise<void> {
     if (this.webviewPosition === "editor") {
-      this.clearSidebarWebview();
-      this.revealEditorPanel();
-      await this.closeSidebarView();
+      await this.showEditorWebview();
       return;
     }
 
@@ -158,14 +156,18 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
 
   private async routeVisibleSidebarView(): Promise<void> {
     if (this.webviewPosition === "editor") {
-      this.clearSidebarWebview();
-      this.revealEditorPanel();
-      await this.closeSidebarView();
+      await this.showEditorWebview();
       return;
     }
 
     this.disposeEditorPanel();
     this.showSidebarWebview();
+  }
+
+  private async showEditorWebview(): Promise<void> {
+    this.clearSidebarWebview();
+    this.revealEditorPanel();
+    await this.focusEditorArea();
   }
 
   private revealEditorPanel(): void {
@@ -256,11 +258,12 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async closeSidebarView(): Promise<void> {
+  private async focusEditorArea(): Promise<void> {
     try {
-      await vscode.commands.executeCommand("workbench.action.closeSidebar");
+      await vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
     } catch {
-      // VSCode does not expose a direct dispose API for contributed WebviewViews.
+      // Focus is best-effort; VSCode does not expose a safe API to hide only
+      // this WebviewView after users move it into another sidebar container.
     }
   }
 
@@ -283,6 +286,9 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       if (message.command === "reconnect") {
         void vscode.commands.executeCommand("furry-ai-state.reconnect");
       }
+      if (message.command === "toggle-webview-position") {
+        void this.toggleWebviewPosition();
+      }
       if (message.command === "open-docs") {
         void this.openExternal("docs");
       }
@@ -294,6 +300,13 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
 
   private async openExternal(target: ActionTarget): Promise<void> {
     await vscode.env.openExternal(vscode.Uri.parse(actionUrlMap[target]));
+  }
+
+  private async toggleWebviewPosition(): Promise<void> {
+    const nextPosition =
+      this.webviewPosition === "editor" ? "sidebar" : "editor";
+
+    await this.setWebviewPosition(nextPosition, true);
   }
 
   private postCurrentState(): void {
@@ -332,6 +345,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       message,
       file,
       imageUri: imageUri.toString(),
+      webviewPosition: this.webviewPosition,
       connectionStatus: this.connectionStatus,
       connectionLabel: connectionLabelMap[this.connectionStatus]
     });
@@ -375,6 +389,13 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
                   <path d="M3 21v-5h5" />
                   <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
                   <path d="M16 8h5V3" />
+                </svg>
+              </button>
+              <button id="position-button" class="icon-button" type="button" title="Switch webview position" aria-label="Switch webview position">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <path d="M9 4v16" />
+                  <path d="m15 9 3 3-3 3" />
                 </svg>
               </button>
               <button id="docs-button" class="icon-button" type="button" title="Open furry action guide" aria-label="Open furry action guide">
