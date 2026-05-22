@@ -69,6 +69,14 @@ The webview also renders optional state details from the MCP runtime:
 - `message`: short text describing what the AI agent is doing.
 - `file`: the current code file being edited, shown when the agent publishes one.
 
+The status text area has a top-right icon action bar:
+
+- reconnect button: posts `reconnect` to the extension host and runs `furry-ai-state.reconnect`.
+- action guide button: posts `open-docs` and opens `https://kcnhl2uub4k0.feishu.cn/wiki/JJ3KwGjRQiem5TkdTBccLeKrnJe?from=from_copylink`.
+- GitHub button: posts `open-github` and opens `https://github.com/MasaoMinn/furry-ai-state`.
+
+External links must be opened from the extension host with `vscode.env.openExternal`, not directly from inline webview handlers.
+
 Users can run `Furry AI State: Set Webview Position` from the command palette to choose where the webview is shown:
 
 - `sidebar`: use the contributed `AI State` sidebar webview, matching the original behavior.

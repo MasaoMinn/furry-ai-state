@@ -2,7 +2,7 @@
   "name": "furry-ai-state",
   "displayName": "Furry AI State",
   "description": "Display AI companion state illustrations in a VSCode sidebar webview.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "tangetsu",
   "license": "MIT",
   "engines": {

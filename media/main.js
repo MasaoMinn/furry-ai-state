@@ -23,6 +23,8 @@ const fileBlock = document.querySelector("#file-block");
 const activeFile = document.querySelector("#active-file");
 const connectionLabel = document.querySelector("#connection-label");
 const reconnectButton = document.querySelector("#reconnect-button");
+const docsButton = document.querySelector("#docs-button");
+const githubButton = document.querySelector("#github-button");
 const statusRow = document.querySelector(".status-row");
 const details = document.querySelector(".details");
 
@@ -94,11 +96,10 @@ function syncImageFrameSize() {
   const rowGap = parseFloat(panelStyle.rowGap || panelStyle.gap || "0") || 0;
   const fixedHeight =
     getElementHeight(statusRow) +
-    getElementHeight(details) +
-    getElementHeight(reconnectButton);
+    getElementHeight(details);
   const availableHeight = Math.max(
     0,
-    statePanel.clientHeight - fixedHeight - rowGap * 3
+    statePanel.clientHeight - fixedHeight - rowGap * 2
   );
 
   imageFrame.style.height = `${availableHeight}px`;
@@ -145,6 +146,14 @@ reconnectButton?.addEventListener("click", () => {
   vscode.postMessage({ command: "reconnect" });
 });
 
+docsButton?.addEventListener("click", () => {
+  vscode.postMessage({ command: "open-docs" });
+});
+
+githubButton?.addEventListener("click", () => {
+  vscode.postMessage({ command: "open-github" });
+});
+
 window.addEventListener("resize", scheduleImageFrameSize);
 stateImage?.addEventListener("load", scheduleImageFrameSize);
 
@@ -158,9 +167,6 @@ if (typeof ResizeObserver !== "undefined") {
   }
   if (details) {
     resizeObserver.observe(details);
-  }
-  if (reconnectButton) {
-    resizeObserver.observe(reconnectButton);
   }
 }
 

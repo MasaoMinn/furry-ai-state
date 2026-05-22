@@ -39,6 +39,13 @@ const webviewPositions = ["sidebar", "editor"] as const;
 
 type WebviewPosition = (typeof webviewPositions)[number];
 
+const actionUrlMap = {
+  docs: "https://kcnhl2uub4k0.feishu.cn/wiki/JJ3KwGjRQiem5TkdTBccLeKrnJe?from=from_copylink",
+  github: "https://github.com/MasaoMinn/furry-ai-state"
+} as const;
+
+type ActionTarget = keyof typeof actionUrlMap;
+
 export class StateViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = "furryAiState.stateView";
   private static readonly editorViewType = "furryAiState.editorView";
@@ -276,7 +283,17 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       if (message.command === "reconnect") {
         void vscode.commands.executeCommand("furry-ai-state.reconnect");
       }
+      if (message.command === "open-docs") {
+        void this.openExternal("docs");
+      }
+      if (message.command === "open-github") {
+        void this.openExternal("github");
+      }
     });
+  }
+
+  private async openExternal(target: ActionTarget): Promise<void> {
+    await vscode.env.openExternal(vscode.Uri.parse(actionUrlMap[target]));
   }
 
   private postCurrentState(): void {
@@ -345,14 +362,40 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
           <img id="state-image" alt="AI state" />
         </div>
         <div class="status-row">
-          <div>
+          <div class="status-copy">
             <div class="label">Agent State</div>
             <div id="state-label" class="state-label">Idle</div>
             <div id="state-message" class="state-message is-hidden"></div>
           </div>
-          <div class="connection">
-            <span id="connection-dot" class="dot"></span>
-            <span id="connection-label">Connecting</span>
+          <div class="status-tools">
+            <div class="action-bar" aria-label="Furry AI State actions">
+              <button id="reconnect-button" class="icon-button" type="button" title="Reconnect AI State Runtime" aria-label="Reconnect AI State Runtime">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
+                  <path d="M3 21v-5h5" />
+                  <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
+                  <path d="M16 8h5V3" />
+                </svg>
+              </button>
+              <button id="docs-button" class="icon-button" type="button" title="Open furry action guide" aria-label="Open furry action guide">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
+                  <path d="M8 6h8" />
+                  <path d="M8 10h8" />
+                </svg>
+              </button>
+              <button id="github-button" class="icon-button" type="button" title="Open GitHub repository" aria-label="Open GitHub repository">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.5-.4 7-1.7 7-7.5a5.8 5.8 0 0 0-1.6-4.1A5.4 5.4 0 0 0 19.3 0S18 0 15.4 1.6a13.4 13.4 0 0 0-6.8 0C6 0 4.7 0 4.7 0a5.4 5.4 0 0 0-.1 2.9A5.8 5.8 0 0 0 3 7c0 5.8 3.5 7.1 7 7.5A4.8 4.8 0 0 0 9 18v4" />
+                  <path d="M9 18c-4.5 2-5-2-7-2" />
+                </svg>
+              </button>
+            </div>
+            <div class="connection">
+              <span id="connection-dot" class="dot"></span>
+              <span id="connection-label">Connecting</span>
+            </div>
           </div>
         </div>
         <div class="details">
@@ -361,7 +404,6 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
             <div id="active-file" class="detail-text file-text"></div>
           </div>
         </div>
-        <button id="reconnect-button" type="button">Reconnect</button>
       </section>
     </main>
     <script src="${scriptUri}"></script>
