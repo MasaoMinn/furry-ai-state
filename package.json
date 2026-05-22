@@ -13,7 +13,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:furryAiState.stateView"
+    "onView:furryAiState.stateView",
+    "onCommand:furry-ai-state.setWebviewPosition"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -39,6 +40,20 @@
           "default": 1000,
           "minimum": 250,
           "maximum": 30000
+        },
+        "furry-ai-state.webviewPosition": {
+          "type": "string",
+          "title": "Webview Position",
+          "description": "Where to show the Furry AI State webview.",
+          "enum": [
+            "sidebar",
+            "editor"
+          ],
+          "enumDescriptions": [
+            "Show the webview in the Furry AI State sidebar view.",
+            "Show the webview in an editor tab."
+          ],
+          "default": "sidebar"
         }
       }
     },
@@ -64,6 +79,11 @@
       {
         "command": "furry-ai-state.reconnect",
         "title": "Reconnect AI State Runtime",
+        "category": "Furry AI State"
+      },
+      {
+        "command": "furry-ai-state.setWebviewPosition",
+        "title": "Set Webview Position",
         "category": "Furry AI State"
       }
     ]

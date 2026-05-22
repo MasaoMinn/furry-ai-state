@@ -28,6 +28,17 @@ export function activate(context: vscode.ExtensionContext): void {
     controller,
     vscode.commands.registerCommand("furry-ai-state.reconnect", () => {
       controller?.restart();
+    }),
+    vscode.commands.registerCommand(
+      "furry-ai-state.setWebviewPosition",
+      (position?: unknown) => {
+        void provider.setWebviewPositionFromCommand(position);
+      }
+    ),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("furry-ai-state.webviewPosition")) {
+        void provider.refreshConfiguredWebviewPosition();
+      }
     })
   );
 

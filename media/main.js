@@ -10,6 +10,10 @@ const vscode =
       };
 
 const root = document.querySelector(".app");
+const statePanel = document.querySelector(".state-panel");
+const imageFrame = /** @type {HTMLElement | null} */ (
+  document.querySelector(".image-frame")
+);
 const stateImage = /** @type {HTMLImageElement | null} */ (
   document.querySelector("#state-image")
 );
@@ -19,6 +23,8 @@ const fileBlock = document.querySelector("#file-block");
 const activeFile = document.querySelector("#active-file");
 const connectionLabel = document.querySelector("#connection-label");
 const reconnectButton = document.querySelector("#reconnect-button");
+const statusRow = document.querySelector(".status-row");
+const details = document.querySelector(".details");
 
 window.addEventListener("message", (event) => {
   const message = event.data;
@@ -43,6 +49,7 @@ window.addEventListener("message", (event) => {
     connectionLabel.textContent =
       message.connectionLabel || message.connectionStatus;
   }
+  scheduleImageFrameSize();
 });
 
 /**
@@ -74,8 +81,88 @@ function setDetail(block, textNode, value) {
   textNode.textContent = text;
 }
 
+function scheduleImageFrameSize() {
+  window.requestAnimationFrame(syncImageFrameSize);
+}
+
+function syncImageFrameSize() {
+  if (!root || !statePanel || !imageFrame) {
+    return;
+  }
+
+  const panelStyle = window.getComputedStyle(statePanel);
+  const rowGap = parseFloat(panelStyle.rowGap || panelStyle.gap || "0") || 0;
+  const fixedHeight =
+    getElementHeight(statusRow) +
+    getElementHeight(details) +
+    getElementHeight(reconnectButton);
+  const availableHeight = Math.max(
+    0,
+    statePanel.clientHeight - fixedHeight - rowGap * 3
+  );
+
+  imageFrame.style.height = `${availableHeight}px`;
+  syncImageSize();
+}
+
+function syncImageSize() {
+  if (!imageFrame || !stateImage) {
+    return;
+  }
+
+  const naturalWidth = stateImage.naturalWidth;
+  const naturalHeight = stateImage.naturalHeight;
+  if (!naturalWidth || !naturalHeight) {
+    stateImage.style.width = "";
+    stateImage.style.height = "";
+    return;
+  }
+
+  const availableWidth = imageFrame.clientWidth;
+  const availableHeight = imageFrame.clientHeight;
+  const scale = Math.min(
+    availableWidth / naturalWidth,
+    availableHeight / naturalHeight,
+    1
+  );
+
+  stateImage.style.width = `${Math.floor(naturalWidth * scale)}px`;
+  stateImage.style.height = `${Math.floor(naturalHeight * scale)}px`;
+}
+
+/**
+ * @param {Element | null} element
+ */
+function getElementHeight(element) {
+  if (!element) {
+    return 0;
+  }
+
+  return element.getBoundingClientRect().height;
+}
+
 reconnectButton?.addEventListener("click", () => {
   vscode.postMessage({ command: "reconnect" });
 });
 
+window.addEventListener("resize", scheduleImageFrameSize);
+stateImage?.addEventListener("load", scheduleImageFrameSize);
+
+if (typeof ResizeObserver !== "undefined") {
+  const resizeObserver = new ResizeObserver(scheduleImageFrameSize);
+  if (root) {
+    resizeObserver.observe(root);
+  }
+  if (statusRow) {
+    resizeObserver.observe(statusRow);
+  }
+  if (details) {
+    resizeObserver.observe(details);
+  }
+  if (reconnectButton) {
+    resizeObserver.observe(reconnectButton);
+  }
+}
+
+scheduleImageFrameSize();
 vscode.postMessage({ command: "ready" });
