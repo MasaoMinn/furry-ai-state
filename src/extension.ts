@@ -26,7 +26,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     controller,
-    vscode.commands.registerCommand("furry-ai-state.reconnect", () => {
+    vscode.commands.registerCommand("furry-ai-state.reconnect", (options?: { skipIdleReset?: boolean }) => {
+      if (!options?.skipIdleReset) {
+        provider.resetStateToIdle({ ignoreCurrentStateReplay: true });
+      }
       controller?.restart();
     }),
     vscode.commands.registerCommand(
@@ -35,9 +38,15 @@ export function activate(context: vscode.ExtensionContext): void {
         void provider.setWebviewPositionFromCommand(position);
       }
     ),
+    vscode.commands.registerCommand("furry-ai-state.customizeImages", () => {
+      void provider.customizeImagesFromCommand();
+    }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("furry-ai-state.webviewPosition")) {
         void provider.refreshConfiguredWebviewPosition();
+      }
+      if (event.affectsConfiguration("furry-ai-state.customImages")) {
+        provider.refreshConfiguredCustomImages();
       }
     })
   );

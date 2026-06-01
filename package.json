@@ -14,7 +14,8 @@
   ],
   "activationEvents": [
     "onView:furryAiState.stateView",
-    "onCommand:furry-ai-state.setWebviewPosition"
+    "onCommand:furry-ai-state.setWebviewPosition",
+    "onCommand:furry-ai-state.customizeImages"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -54,6 +55,15 @@
             "Show the webview in an editor tab."
           ],
           "default": "sidebar"
+        },
+        "furry-ai-state.customImages": {
+          "type": "object",
+          "title": "Custom State Images",
+          "description": "Optional local image paths keyed by agent state. Missing or unreadable files fall back to bundled images.",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -84,6 +94,11 @@
       {
         "command": "furry-ai-state.setWebviewPosition",
         "title": "Set Webview Position",
+        "category": "Furry AI State"
+      },
+      {
+        "command": "furry-ai-state.customizeImages",
+        "title": "Customize Images",
         "category": "Furry AI State"
       }
     ]

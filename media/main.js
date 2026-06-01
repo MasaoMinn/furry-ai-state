@@ -28,6 +28,7 @@ const docsButton = document.querySelector("#docs-button");
 const githubButton = document.querySelector("#github-button");
 const statusRow = document.querySelector(".status-row");
 const details = document.querySelector(".details");
+let fallbackImageUri = "";
 
 window.addEventListener("message", (event) => {
   const message = event.data;
@@ -39,6 +40,8 @@ window.addEventListener("message", (event) => {
     root.setAttribute("data-state", message.state);
     root.setAttribute("data-connection", message.connectionStatus);
   }
+  fallbackImageUri =
+    typeof message.fallbackImageUri === "string" ? message.fallbackImageUri : "";
   if (stateImage && typeof message.imageUri === "string") {
     stateImage.src = message.imageUri;
     stateImage.alt = `AI companion state: ${message.state}`;
@@ -184,6 +187,11 @@ githubButton?.addEventListener("click", () => {
 
 window.addEventListener("resize", scheduleImageFrameSize);
 stateImage?.addEventListener("load", scheduleImageFrameSize);
+stateImage?.addEventListener("error", () => {
+  if (fallbackImageUri && stateImage.src !== fallbackImageUri) {
+    stateImage.src = fallbackImageUri;
+  }
+});
 
 if (typeof ResizeObserver !== "undefined") {
   const resizeObserver = new ResizeObserver(scheduleImageFrameSize);

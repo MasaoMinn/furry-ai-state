@@ -1,5 +1,8 @@
+import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import {
+  agentStates,
   type AgentState,
   type CompanionStateEvent,
   type CompanionConnectionEvent,
@@ -11,9 +14,9 @@ const stateImageMap: Record<AgentState, string> = {
   thinking: "thinking.png",
   planning: "thinking.png",
   coding: "building.png",
-  testing: "building.png",
-  debugging: "building.png",
-  error: "building.png",
+  testing: "testing.png",
+  debugging: "testing.png",
+  error: "error.png",
   success: "completed.png"
 };
 
@@ -38,6 +41,7 @@ const connectionLabelMap: Record<CompanionConnectionStatus, string> = {
 const webviewPositions = ["sidebar", "editor"] as const;
 
 type WebviewPosition = (typeof webviewPositions)[number];
+type CustomImageConfig = Partial<Record<AgentState, string>>;
 
 const actionUrlMap = {
   docs: "https://kcnhl2uub4k0.feishu.cn/wiki/JJ3KwGjRQiem5TkdTBccLeKrnJe?from=from_copylink",
@@ -60,8 +64,11 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
   };
   private connectionStatus: CompanionConnectionStatus = "connecting";
   private webviewPosition: WebviewPosition = getConfiguredWebviewPosition();
+  private customImages: CustomImageConfig = getConfiguredCustomImages();
+  private lastAgentStateEvent: CompanionStateEvent | null = null;
+  private staleStateReplayToIgnore: CompanionStateEvent | null = null;
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) { }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.sidebarView = webviewView;
@@ -119,13 +126,93 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     await this.setWebviewPosition(getConfiguredWebviewPosition(), false);
   }
 
+  refreshConfiguredCustomImages(): void {
+    this.customImages = getConfiguredCustomImages();
+    this.configureActiveWebviews();
+    this.postCurrentState();
+  }
+
+  async customizeImagesFromCommand(): Promise<void> {
+    const selected = await vscode.window.showQuickPick(
+      [
+        {
+          label: "$(discard) Reset to bundled images",
+          description: "Clear all custom image paths",
+          action: "reset" as const
+        },
+        ...agentStates.map((state) => ({
+          label: `$(file-media) ${stateLabelMap[state]}`,
+          description: this.customImages[state] ?? "Using bundled image",
+          detail: `Set a local image for the ${state} state`,
+          action: "set" as const,
+          state
+        }))
+      ],
+      {
+        placeHolder: "Choose a state image to customize, or reset all",
+        title: "Furry AI State: Customize Images"
+      }
+    );
+
+    if (!selected) {
+      return;
+    }
+
+    if (selected.action === "reset") {
+      await this.updateCustomImages({});
+      void vscode.window.showInformationMessage(
+        "Furry AI State custom images reset to bundled images."
+      );
+      return;
+    }
+
+    const [imageUri] =
+      (await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: {
+          Images: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]
+        },
+        openLabel: `Use for ${stateLabelMap[selected.state]}`,
+        title: `Select ${stateLabelMap[selected.state]} Image`
+      })) ?? [];
+
+    if (!imageUri) {
+      return;
+    }
+
+    await this.updateCustomImages({
+      ...this.customImages,
+      [selected.state]: imageUri.fsPath
+    });
+  }
+
   updateState(event: CompanionStateEvent): void {
+    if (this.shouldIgnoreStaleStateReplay(event)) {
+      return;
+    }
+
+    this.staleStateReplayToIgnore = null;
+    this.lastAgentStateEvent = event;
     this.stateEvent = event;
     this.postCurrentState();
   }
 
   updateConnection(event: CompanionConnectionEvent): void {
     this.connectionStatus = event.status;
+    this.postCurrentState();
+  }
+
+  resetStateToIdle(options: { ignoreCurrentStateReplay?: boolean } = {}): void {
+    if (options.ignoreCurrentStateReplay && this.lastAgentStateEvent) {
+      this.staleStateReplayToIgnore = this.lastAgentStateEvent;
+    }
+
+    this.stateEvent = {
+      type: "state",
+      state: "idle"
+    };
     this.postCurrentState();
   }
 
@@ -183,9 +270,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(this.context.extensionUri, "media")
-        ],
+        localResourceRoots: this.getWebviewResourceRoots(),
         retainContextWhenHidden: true
       }
     );
@@ -268,12 +353,8 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
   }
 
   private initializeWebview(webview: vscode.Webview): vscode.Disposable {
-    webview.options = {
-      enableScripts: true,
-      localResourceRoots: [
-        vscode.Uri.joinPath(this.context.extensionUri, "media")
-      ]
-    };
+    this.configureWebview(webview);
+    this.resetStateToIdle();
 
     webview.html = this.getHtml(webview);
 
@@ -284,7 +365,11 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
         }
       }
       if (message.command === "reconnect") {
-        void vscode.commands.executeCommand("furry-ai-state.reconnect");
+        this.resetStateToIdle({ ignoreCurrentStateReplay: true });
+        this.postCurrentStateTo(webview);
+        void vscode.commands.executeCommand("furry-ai-state.reconnect", {
+          skipIdleReset: true
+        });
       }
       if (message.command === "toggle-webview-position") {
         void this.toggleWebviewPosition();
@@ -309,6 +394,66 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     await this.setWebviewPosition(nextPosition, true);
   }
 
+  private shouldIgnoreStaleStateReplay(event: CompanionStateEvent): boolean {
+    const staleStateReplay = this.staleStateReplayToIgnore;
+    if (!staleStateReplay) {
+      return false;
+    }
+
+    if (!isSameStateEvent(event, staleStateReplay)) {
+      return false;
+    }
+
+    this.staleStateReplayToIgnore = null;
+    return true;
+  }
+
+  private async updateCustomImages(customImages: CustomImageConfig): Promise<void> {
+    await vscode.workspace
+      .getConfiguration("furry-ai-state")
+      .update("customImages", customImages, vscode.ConfigurationTarget.Global);
+
+    this.customImages = customImages;
+    this.configureActiveWebviews();
+    this.postCurrentState();
+  }
+
+  private configureActiveWebviews(): void {
+    if (this.sidebarView && this.sidebarWebviewDisposable) {
+      this.configureWebview(this.sidebarView.webview);
+    }
+
+    if (this.editorPanel) {
+      this.configureWebview(this.editorPanel.webview);
+    }
+  }
+
+  private configureWebview(webview: vscode.Webview): void {
+    webview.options = {
+      enableScripts: true,
+      localResourceRoots: this.getWebviewResourceRoots()
+    };
+  }
+
+  private getWebviewResourceRoots(): vscode.Uri[] {
+    const roots = [
+      vscode.Uri.joinPath(this.context.extensionUri, "media")
+    ];
+    const customRootPaths = new Set<string>();
+
+    for (const imagePath of Object.values(this.customImages)) {
+      if (imagePath && isReadableFile(imagePath)) {
+        customRootPaths.add(path.dirname(imagePath));
+      }
+    }
+
+    for (const rootPath of customRootPaths) {
+      roots.push(vscode.Uri.file(rootPath));
+    }
+
+    return roots;
+  }
+
   private postCurrentState(): void {
     if (this.webviewPosition === "sidebar" && this.sidebarView) {
       this.postCurrentStateTo(this.sidebarView.webview);
@@ -329,13 +474,10 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
 
   private postCurrentStateTo(webview: vscode.Webview): void {
     const { state, message, file } = this.stateEvent;
-    const imageUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this.context.extensionUri,
-        "media",
-        "images",
-        stateImageMap[state]
-      )
+    this.configureWebview(webview);
+    const { imageUri, fallbackImageUri } = this.getStateImageUris(
+      state,
+      webview
     );
 
     void webview.postMessage({
@@ -344,11 +486,41 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       stateLabel: stateLabelMap[state],
       message,
       file,
-      imageUri: imageUri.toString(),
+      imageUri,
+      fallbackImageUri,
       webviewPosition: this.webviewPosition,
       connectionStatus: this.connectionStatus,
       connectionLabel: connectionLabelMap[this.connectionStatus]
     });
+  }
+
+  private getStateImageUris(
+    state: AgentState,
+    webview: vscode.Webview
+  ): { imageUri: string; fallbackImageUri: string } {
+    const fallbackImageUri = webview
+      .asWebviewUri(
+        vscode.Uri.joinPath(
+          this.context.extensionUri,
+          "media",
+          "images",
+          stateImageMap[state]
+        )
+      )
+      .toString();
+    const customImagePath = this.customImages[state];
+
+    if (!customImagePath || !isReadableFile(customImagePath)) {
+      return {
+        imageUri: fallbackImageUri,
+        fallbackImageUri
+      };
+    }
+
+    return {
+      imageUri: webview.asWebviewUri(vscode.Uri.file(customImagePath)).toString(),
+      fallbackImageUri
+    };
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -445,5 +617,40 @@ function isWebviewPosition(value: unknown): value is WebviewPosition {
   return (
     typeof value === "string" &&
     webviewPositions.includes(value as WebviewPosition)
+  );
+}
+
+function getConfiguredCustomImages(): CustomImageConfig {
+  const value = vscode.workspace
+    .getConfiguration("furry-ai-state")
+    .get<Record<string, unknown>>("customImages", {});
+  const customImages: CustomImageConfig = {};
+
+  for (const state of agentStates) {
+    const imagePath = value[state];
+    if (typeof imagePath === "string" && imagePath.trim()) {
+      customImages[state] = imagePath.trim();
+    }
+  }
+
+  return customImages;
+}
+
+function isReadableFile(filePath: string): boolean {
+  try {
+    return fs.statSync(filePath).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function isSameStateEvent(
+  left: CompanionStateEvent,
+  right: CompanionStateEvent
+): boolean {
+  return (
+    left.state === right.state &&
+    left.message === right.message &&
+    left.file === right.file
   );
 }
