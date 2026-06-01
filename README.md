@@ -4,39 +4,50 @@
 
 The extension works with `furry-companion-mcp`, a companion MCP runtime that receives agent state updates through the `set_state` tool and broadcasts them to the VSCode webview through a local IPC bridge.
 
-```text
-AI client
--> furry-companion-mcp set_state tool
--> local JSON Lines IPC bridge
--> furry-ai-state VSCode extension
--> sidebar or editor webview
-```
-
 Project document and instruction: [Feishu document](https://kcnhl2uub4k0.feishu.cn/wiki/OuBCwjPX7iBL9PkZOjccKvGQnGf?from=from_copylink)
 
-## Download
-
-### Install From VSIX
-
-Download `furry-ai-state-0.1.0.vsix` from this repository's release artifacts, then install it in VSCode:
-
-```bash
-code --install-extension furry-ai-state-0.1.0.vsix
-```
-
-You can also install it from VSCode with `Extensions: Install from VSIX...`.
-
-### Build Locally
-
-Clone the repository, install dependencies, and package the extension:
-
-```bash
-npm install
-npm run package
-```
-
-The generated plugin file is:
+Please activate Furry Companion MCP after installing the extension by pasting the prompt to your agent:
 
 ```text
-furry-ai-state-0.1.0.vsix
+Please install Furry Companion MCP for the current environment:
+
+Codex:
+codex mcp add furry_companion -- npx -y furry-companion-mcp
+
+Cursor / Claude Desktop:
+Add:
+{
+"mcpServers": {
+"furry_companion": {
+"command": "npx",
+"args": ["-y", "furry-companion-mcp"]
+}
+}
+}
+
+After installation, please restart the Agent session and verify if set_state appears in MCP tools.
+
+If it fails:
+1. First, confirm that Node.js and npm are available: node-v&&NPM-v
+2. The test package can run: npx-y furry companion mcp
+3. If prompted with permission or network errors, clear the npm cache and retry: npm cache verify
+If MCP already exists, remove the old configuration first and then add it again.
 ```
+
+## Preview
+
+### Thinking State
+
+![thinking](assets/_thinking.png)
+
+### Coding State
+
+![coding](assets/_coding.png)
+
+### Completed State
+
+![completed](assets/_completed.png)
+
+### Testing State
+
+![testing](assets/_testing.png)
