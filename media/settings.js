@@ -28,6 +28,13 @@ window.addEventListener("message", (event) => {
  *   imageUri: string;
  *   fallbackImageUri: string;
  *   bundledImageUri: string;
+ *   bundledImageName: string;
+ *   bundledImages: Array<{
+ *     fileName: string;
+ *     label: string;
+ *     imageUri: string;
+ *     selected: boolean;
+ *   }>;
  *   customImagePath?: string;
  *   customImageStatus: "bundled" | "custom" | "missing";
  * }>} images
@@ -47,6 +54,13 @@ function renderSettings(images) {
  *   imageUri: string;
  *   fallbackImageUri: string;
  *   bundledImageUri: string;
+ *   bundledImageName: string;
+ *   bundledImages: Array<{
+ *     fileName: string;
+ *     label: string;
+ *     imageUri: string;
+ *     selected: boolean;
+ *   }>;
  *   customImagePath?: string;
  *   customImageStatus: "bundled" | "custom" | "missing";
  * }} item
@@ -86,8 +100,49 @@ function createImageSettingItem(item) {
 
   const pathText = document.createElement("div");
   pathText.className = "image-path";
-  pathText.textContent = item.customImagePath || "Using bundled image";
+  pathText.textContent =
+    item.customImagePath || `Using provided image: ${item.bundledImageName}`;
   pathText.title = pathText.textContent;
+
+  const providedImages = document.createElement("div");
+  providedImages.className = "provided-images";
+  providedImages.setAttribute("aria-label", `${item.label} provided images`);
+
+  for (const option of item.bundledImages) {
+    const optionButton = document.createElement("button");
+    const isActiveProvidedImage = option.selected && !item.customImagePath;
+    optionButton.className = isActiveProvidedImage
+      ? "provided-image-option is-selected"
+      : "provided-image-option";
+    optionButton.type = "button";
+    optionButton.title = option.label;
+    optionButton.ariaLabel = `Use ${option.label} for ${item.label}`;
+    optionButton.disabled = isActiveProvidedImage;
+
+    const optionPreview = document.createElement("span");
+    optionPreview.className = "provided-image-option-preview";
+
+    const optionImage = document.createElement("img");
+    optionImage.alt = "";
+    optionImage.src = option.imageUri;
+    optionPreview.append(optionImage);
+
+    const optionLabel = document.createElement("span");
+    optionLabel.className = "provided-image-option-label";
+    optionLabel.textContent = option.label;
+
+    optionButton.append(optionPreview, optionLabel);
+    optionButton.addEventListener("click", () => {
+      image.src = option.imageUri;
+      vscode.postMessage({
+        command: "select-bundled-image",
+        state: item.state,
+        fileName: option.fileName,
+      });
+    });
+
+    providedImages.append(optionButton);
+  }
 
   const actions = document.createElement("div");
   actions.className = "image-setting-actions";
@@ -116,7 +171,7 @@ function createImageSettingItem(item) {
   });
 
   actions.append(chooseButton, resetButton);
-  body.append(header, pathText, actions);
+  body.append(header, pathText, providedImages, actions);
   article.append(preview, body);
 
   return article;

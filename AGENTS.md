@@ -35,16 +35,22 @@ MCP project files are in `D:\IntegratedSourceOnDesktop\mcp-server`; check that r
 
 - Supported states are `idle`, `thinking`, `planning`, `coding`, `testing`, `success`, and `error`.
 - Image mapping must stay stable:
-  - `idle`, `thinking`, `planning` -> `media/images/thinking.png`
-  - `coding`, `error` -> `media/images/building.png`
-  - `testing` -> `media/images/testing.png`
-  - `success` -> `media/images/completed.png`
+  - `idle` -> `media/images/idle/idle.png`
+  - `thinking` -> `media/images/thinking/thinking.png`
+  - `planning` -> `media/images/planning/planning.png`
+  - `coding` -> `media/images/coding/coding.png`
+  - `testing` -> `media/images/testing/testing.png`
+  - `success` -> `media/images/success/success.png`
+  - `error` -> `media/images/error/error.png`
 - Preserve optional `message` and `file` end to end from IPC event to webview rendering.
 - Webview initialization and reconnect actions should reset the visible state to `idle` until a new IPC state event arrives; reconnect must track the last accepted agent state and ignore it if the IPC bridge immediately replays it.
 - When making changes related to MCP tools or the paired MCP server, explicitly report which MCP files or contracts changed.
 - Webview location is controlled by `furry-ai-state.webviewPosition` with values `sidebar` and `editor`.
 - Custom state images are controlled by `furry-ai-state.customImages`, keyed by agent state and storing local image file paths.
-- `Furry AI State: Customize Pictures` and the status action-bar settings button open an editor webview settings page with previews, per-state image selection, per-state reset, and reset-all.
+- Bundled state image choices are controlled by `furry-ai-state.bundledImages`, keyed by agent state and storing bundled image file names from that state's image folder.
+- Bundled image folders may contain PNG or animated GIF resources; both the agent state webview and image settings webview must render GIFs through normal `<img>` previews.
+- `Furry AI State: Customize Pictures` and the status action-bar settings button open an editor webview settings page with previews, per-state local image selection, per-state provided image selection, per-state reset, and reset-all.
+- Provided image options in the settings page must show image previews and apply immediately when clicked.
 - The image settings page must show one image item per row, show custom image paths fully without truncation, confirm reset actions with a modal, use a blue badge for bundled images, and use a green badge for custom images.
 - Missing, unreadable, or failed custom image resources must fall back to the bundled image for that state.
 - Only the active display mode should receive state updates.

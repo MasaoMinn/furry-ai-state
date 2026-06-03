@@ -2,7 +2,7 @@
   "name": "furry-ai-state",
   "displayName": "Furry AI State",
   "description": "Display AI companion state illustrations in a VSCode sidebar webview.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "tangetsu",
   "license": "MIT",
   "icon": "assets/logo.png",
@@ -65,6 +65,15 @@
           "type": "object",
           "title": "Custom State Images",
           "description": "Optional local image paths keyed by agent state. Missing or unreadable files fall back to bundled images.",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "furry-ai-state.bundledImages": {
+          "type": "object",
+          "title": "Bundled State Images",
+          "description": "Optional bundled image file names keyed by agent state. Missing or unreadable bundled files fall back to the default bundled image for that state.",
           "default": {},
           "additionalProperties": {
             "type": "string"

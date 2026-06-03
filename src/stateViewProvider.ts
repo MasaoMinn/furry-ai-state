@@ -9,14 +9,24 @@ import {
   type CompanionConnectionStatus
 } from "./protocol";
 
-const stateImageMap: Record<AgentState, string> = {
-  idle: "thinking.png",
-  thinking: "thinking.png",
-  planning: "thinking.png",
-  coding: "building.png",
-  testing: "testing.png",
-  error: "error.png",
-  success: "completed.png"
+const supportedBundledImageExtensions = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".svg"
+]);
+
+const defaultStateImageMap: Record<AgentState, readonly [string, string]> = {
+  idle: ["idle", "idle.png"],
+  thinking: ["thinking", "thinking.png"],
+  planning: ["planning", "planning.png"],
+  coding: ["coding", "coding.png"],
+  testing: ["testing", "testing.png"],
+  error: ["error", "error.png"],
+  success: ["success", "success.png"]
 };
 
 const stateLabelMap: Record<AgentState, string> = {
@@ -40,7 +50,15 @@ const webviewPositions = ["sidebar", "editor"] as const;
 
 type WebviewPosition = (typeof webviewPositions)[number];
 type CustomImageConfig = Partial<Record<AgentState, string>>;
+type BundledImageConfig = Partial<Record<AgentState, string>>;
 type CustomImageStatus = "bundled" | "custom" | "missing";
+
+interface BundledImageOption {
+  fileName: string;
+  label: string;
+  imageUri: string;
+  selected: boolean;
+}
 
 interface StateImageSetting {
   state: AgentState;
@@ -48,6 +66,8 @@ interface StateImageSetting {
   imageUri: string;
   fallbackImageUri: string;
   bundledImageUri: string;
+  bundledImageName: string;
+  bundledImages: BundledImageOption[];
   customImagePath?: string;
   customImageStatus: CustomImageStatus;
 }
@@ -76,6 +96,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
   private connectionStatus: CompanionConnectionStatus = "connecting";
   private webviewPosition: WebviewPosition = getConfiguredWebviewPosition();
   private customImages: CustomImageConfig = getConfiguredCustomImages();
+  private bundledImages: BundledImageConfig = getConfiguredBundledImages();
   private lastAgentStateEvent: CompanionStateEvent | null = null;
   private staleStateReplayToIgnore: CompanionStateEvent | null = null;
 
@@ -139,6 +160,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
 
   refreshConfiguredCustomImages(): void {
     this.customImages = getConfiguredCustomImages();
+    this.bundledImages = getConfiguredBundledImages();
     this.configureActiveWebviews();
     this.postCurrentState();
     this.postImageSettings();
@@ -387,12 +409,18 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     webview.html = this.getImageSettingsHtml(webview);
 
     return webview.onDidReceiveMessage(
-      (message: { command?: string; state?: unknown }) => {
+      (message: { command?: string; state?: unknown; fileName?: unknown }) => {
         if (message.command === "ready") {
           this.postImageSettings();
         }
         if (message.command === "select-custom-image") {
           void this.pickCustomImageFromSettings(message.state);
+        }
+        if (message.command === "select-bundled-image") {
+          void this.selectBundledImageFromSettings(
+            message.state,
+            message.fileName
+          );
         }
         if (message.command === "reset-custom-image") {
           void this.resetCustomImageFromSettings(message.state);
@@ -450,10 +478,13 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    await this.updateCustomImages({
-      ...this.customImages,
-      [state]: imageUri.fsPath
-    });
+    await this.updateImages(
+      {
+        ...this.customImages,
+        [state]: imageUri.fsPath
+      },
+      this.bundledImages
+    );
   }
 
   private async resetCustomImageFromSettings(state: unknown): Promise<void> {
@@ -468,10 +499,12 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const { [state]: _removedImagePath, ...nextCustomImages } =
+    const { [state]: _removedCustomImagePath, ...nextCustomImages } =
       this.customImages;
+    const { [state]: _removedBundledImagePath, ...nextBundledImages } =
+      this.bundledImages;
 
-    await this.updateCustomImages(nextCustomImages);
+    await this.updateImages(nextCustomImages, nextBundledImages);
   }
 
   private async resetAllCustomImagesFromSettings(): Promise<void> {
@@ -482,15 +515,53 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    await this.updateCustomImages({});
+    await this.updateImages({}, {});
   }
 
-  private async updateCustomImages(customImages: CustomImageConfig): Promise<void> {
-    await vscode.workspace
-      .getConfiguration("furry-ai-state")
-      .update("customImages", customImages, vscode.ConfigurationTarget.Global);
+  private async selectBundledImageFromSettings(
+    state: unknown,
+    fileName: unknown
+  ): Promise<void> {
+    if (!isAgentStateValue(state) || typeof fileName !== "string") {
+      return;
+    }
+
+    const nextFileName = path.basename(fileName.trim());
+    if (!this.isBundledImageAvailable(state, nextFileName)) {
+      return;
+    }
+
+    const { [state]: _removedCustomImagePath, ...nextCustomImages } =
+      this.customImages;
+
+    await this.updateImages(
+      nextCustomImages,
+      {
+        ...this.bundledImages,
+        [state]: nextFileName
+      }
+    );
+  }
+
+  private async updateImages(
+    customImages: CustomImageConfig,
+    bundledImages: BundledImageConfig
+  ): Promise<void> {
+    const configuration = vscode.workspace.getConfiguration("furry-ai-state");
+
+    await configuration.update(
+      "customImages",
+      customImages,
+      vscode.ConfigurationTarget.Global
+    );
+    await configuration.update(
+      "bundledImages",
+      bundledImages,
+      vscode.ConfigurationTarget.Global
+    );
 
     this.customImages = customImages;
+    this.bundledImages = bundledImages;
     this.configureActiveWebviews();
     this.postCurrentState();
     this.postImageSettings();
@@ -600,16 +671,96 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     state: AgentState,
     webview: vscode.Webview
   ): string {
+    const { directory, fileName } = this.getBundledStateImage(state);
+
     return webview
       .asWebviewUri(
         vscode.Uri.joinPath(
           this.context.extensionUri,
           "media",
           "images",
-          stateImageMap[state]
+          directory,
+          fileName
         )
       )
       .toString();
+  }
+
+  private getBundledStateImage(
+    state: AgentState,
+    requestedFileName = this.bundledImages[state]
+  ): { directory: string; fileName: string } {
+    const [directory, defaultFileName] = defaultStateImageMap[state];
+    const fileName =
+      requestedFileName &&
+      this.isBundledImageAvailable(state, requestedFileName)
+        ? requestedFileName
+        : defaultFileName;
+
+    return {
+      directory,
+      fileName
+    };
+  }
+
+  private isBundledImageAvailable(state: AgentState, fileName: string): boolean {
+    const [directory] = defaultStateImageMap[state];
+    const imagePath = path.join(
+      this.context.extensionUri.fsPath,
+      "media",
+      "images",
+      directory,
+      path.basename(fileName)
+    );
+
+    return isReadableFile(imagePath) && isSupportedImageFile(imagePath);
+  }
+
+  private getBundledImageOptions(
+    state: AgentState,
+    webview: vscode.Webview
+  ): BundledImageOption[] {
+    const [directory, defaultFileName] = defaultStateImageMap[state];
+    const directoryPath = path.join(
+      this.context.extensionUri.fsPath,
+      "media",
+      "images",
+      directory
+    );
+    const selectedFileName = this.getBundledStateImage(state).fileName;
+    const fileNames = new Set<string>([defaultFileName]);
+
+    try {
+      for (const entry of fs.readdirSync(directoryPath, { withFileTypes: true })) {
+        if (
+          entry.isFile() &&
+          isSupportedImageFile(entry.name)
+        ) {
+          fileNames.add(entry.name);
+        }
+      }
+    } catch {
+      // If bundled files are missing, the default option remains as fallback.
+    }
+
+    return [...fileNames]
+      .sort((left, right) => compareBundledImageNames(left, right, defaultFileName))
+      .map((fileName) => ({
+        fileName,
+        label: fileName,
+        imageUri: webview
+          .asWebviewUri(
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              "media",
+              "images",
+              directory,
+              fileName
+            )
+          )
+          .toString(),
+        selected: fileName === selectedFileName
+      }));
   }
 
   private postImageSettings(): void {
@@ -640,6 +791,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
           ? "custom"
           : "missing"
         : "bundled";
+      const bundledImage = this.getBundledStateImage(state);
 
       return {
         state,
@@ -647,6 +799,8 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
         imageUri,
         fallbackImageUri,
         bundledImageUri: this.getBundledStateImageUri(state, webview),
+        bundledImageName: bundledImage.fileName,
+        bundledImages: this.getBundledImageOptions(state, webview),
         ...(customImagePath ? { customImagePath } : {}),
         customImageStatus
       };
@@ -813,12 +967,50 @@ function getConfiguredCustomImages(): CustomImageConfig {
   return customImages;
 }
 
+function getConfiguredBundledImages(): BundledImageConfig {
+  const value = vscode.workspace
+    .getConfiguration("furry-ai-state")
+    .get<Record<string, unknown>>("bundledImages", {});
+  const bundledImages: BundledImageConfig = {};
+
+  for (const state of agentStates) {
+    const imageFileName = value[state];
+    if (typeof imageFileName === "string" && imageFileName.trim()) {
+      bundledImages[state] = path.basename(imageFileName.trim());
+    }
+  }
+
+  return bundledImages;
+}
+
 function isReadableFile(filePath: string): boolean {
   try {
     return fs.statSync(filePath).isFile();
   } catch {
     return false;
   }
+}
+
+function isSupportedImageFile(filePath: string): boolean {
+  return supportedBundledImageExtensions.has(path.extname(filePath).toLowerCase());
+}
+
+function compareBundledImageNames(
+  left: string,
+  right: string,
+  defaultFileName: string
+): number {
+  if (left === defaultFileName) {
+    return -1;
+  }
+  if (right === defaultFileName) {
+    return 1;
+  }
+
+  return left.localeCompare(right, undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
 }
 
 function isSameStateEvent(

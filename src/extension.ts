@@ -45,7 +45,10 @@ export function activate(context: vscode.ExtensionContext): void {
       if (event.affectsConfiguration("furry-ai-state.webviewPosition")) {
         void provider.refreshConfiguredWebviewPosition();
       }
-      if (event.affectsConfiguration("furry-ai-state.customImages")) {
+      if (
+        event.affectsConfiguration("furry-ai-state.customImages") ||
+        event.affectsConfiguration("furry-ai-state.bundledImages")
+      ) {
         provider.refreshConfiguredCustomImages();
       }
     })

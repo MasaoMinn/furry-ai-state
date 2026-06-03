@@ -139,6 +139,64 @@ body {
   gap: 8px;
 }
 
+.provided-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.provided-image-option {
+  display: grid;
+  grid-template-rows: 70px auto;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px;
+  border: 1px solid var(--vscode-panel-border);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.provided-image-option:hover:not(:disabled) {
+  border-color: var(--vscode-focusBorder);
+}
+
+.provided-image-option.is-selected {
+  border-color: var(--vscode-charts-blue);
+  outline: 1px solid var(--vscode-charts-blue);
+}
+
+.provided-image-option:disabled {
+  opacity: 1;
+}
+
+.provided-image-option-preview {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--vscode-sideBar-background);
+}
+
+.provided-image-option-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.provided-image-option-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 button {
   min-height: 28px;
   padding: 4px 10px;
@@ -188,5 +246,9 @@ button:disabled {
   .image-preview {
     width: 100%;
     max-height: 220px;
+  }
+
+  .provided-images {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   }
 }

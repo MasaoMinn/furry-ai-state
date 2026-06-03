@@ -30,9 +30,13 @@ furry-ai-state/
 │  └─ stateViewProvider.ts
 ├─ media/
 │  ├─ images/
-│  │  ├─ thinking.png
-│  │  ├─ building.png
-│  │  └─ completed.png
+│  │  ├─ idle/
+│  │  ├─ thinking/
+│  │  ├─ planning/
+│  │  ├─ coding/
+│  │  ├─ testing/
+│  │  ├─ success/
+│  │  └─ error/
 │  ├─ main.js
 │  └─ styles.css
 ├─ assets/
@@ -94,21 +98,27 @@ Webview 只负责渲染，不直接连接 IPC。`message` 用于显示 Agent 当
 
 ```ts
 const stateImageMap = {
-  idle: "thinking.png",
-  thinking: "thinking.png",
-  planning: "thinking.png",
-  coding: "building.png",
-  testing: "building.png",
-  error: "building.png",
-  success: "completed.png"
+  idle: ["idle", "idle.png"],
+  thinking: ["thinking", "thinking.png"],
+  planning: ["planning", "planning.png"],
+  coding: ["coding", "coding.png"],
+  testing: ["testing", "testing.png"],
+  success: ["success", "success.png"],
+  error: ["error", "error.png"]
 };
 ```
 
 图片来源已重新复制到本项目：
 
-- `media/images/thinking.png`
-- `media/images/building.png`
-- `media/images/completed.png`
+- `media/images/idle/idle.png`
+- `media/images/thinking/thinking.png`
+- `media/images/planning/planning.png`
+- `media/images/coding/coding.png`
+- `media/images/testing/testing.png`
+- `media/images/success/success.png`
+- `media/images/error/error.png`
+
+每个状态目录可以放多个内置资源，例如 `idle-2.gif`。设置页会列出该状态目录下支持的图片资源，用户可以选择本机图片，也可以选择插件提供的 PNG/GIF 资源。插件提供的资源选项需要显示图片预览，并在用户点击选项后立即生效。
 
 ## 配置项
 
@@ -117,6 +127,9 @@ const stateImageMap = {
 - `furry-ai-state.enabled`: 是否启用 IPC 连接。
 - `furry-ai-state.ipcPath`: 自定义 IPC 地址，空值使用平台默认地址。
 - `furry-ai-state.reconnectDelayMs`: 初始重连延迟。
+- `furry-ai-state.webviewPosition`: Webview 显示位置，支持 `sidebar` 和 `editor`。
+- `furry-ai-state.customImages`: 每个状态的本机自定义图片路径。
+- `furry-ai-state.bundledImages`: 每个状态选中的插件内置图片文件名。
 
 ## 本地开发
 
