@@ -10,7 +10,6 @@ When the `furry_companion` MCP tool is available, publish work phases with `set_
 - `planning`: before deciding implementation steps.
 - `coding`: before editing files; include `file` when one code file is the focus.
 - `testing`: before compile, package, lint, or test commands.
-- `debugging`: before investigating failed validation or runtime behavior.
 - `success`: when implementation and verification finish.
 - `error`: when blocked by an unrecoverable problem.
 
@@ -24,6 +23,8 @@ Use short, concrete `message` values because they are shown directly in the webv
 - `src/stateViewProvider.ts`: shared webview HTML, message handling, state posting, and sidebar/editor switching.
 - `media/main.js`: webview DOM updates and image sizing.
 - `media/styles.css`: webview layout and styling.
+- `media/settings.js`: image settings webview DOM updates and extension-host commands.
+- `media/settings.css`: image settings webview layout and styling.
 - `src/protocol.ts`: state and connection event types shared inside the extension.
 
 The paired MCP server lives outside this repo at `D:\IntegratedSourceOnDesktop\mcp-server`. It exposes `set_state` over stdio and broadcasts JSON Lines state events through local IPC.
@@ -32,10 +33,10 @@ MCP project files are in `D:\IntegratedSourceOnDesktop\mcp-server`; check that r
 
 ## Behavior Rules
 
-- Supported states are `idle`, `thinking`, `planning`, `coding`, `testing`, `debugging`, `success`, and `error`.
+- Supported states are `idle`, `thinking`, `planning`, `coding`, `testing`, `success`, and `error`.
 - Image mapping must stay stable:
   - `idle`, `thinking`, `planning` -> `media/images/thinking.png`
-  - `coding`, `debugging`, `error` -> `media/images/building.png`
+  - `coding`, `error` -> `media/images/building.png`
   - `testing` -> `media/images/testing.png`
   - `success` -> `media/images/completed.png`
 - Preserve optional `message` and `file` end to end from IPC event to webview rendering.
@@ -43,7 +44,8 @@ MCP project files are in `D:\IntegratedSourceOnDesktop\mcp-server`; check that r
 - When making changes related to MCP tools or the paired MCP server, explicitly report which MCP files or contracts changed.
 - Webview location is controlled by `furry-ai-state.webviewPosition` with values `sidebar` and `editor`.
 - Custom state images are controlled by `furry-ai-state.customImages`, keyed by agent state and storing local image file paths.
-- `Furry AI State: Customize Images` lets users pick local replacement images or reset back to bundled images.
+- `Furry AI State: Customize Pictures` and the status action-bar settings button open an editor webview settings page with previews, per-state image selection, per-state reset, and reset-all.
+- The image settings page must show one image item per row, show custom image paths fully without truncation, confirm reset actions with a modal, use a blue badge for bundled images, and use a green badge for custom images.
 - Missing, unreadable, or failed custom image resources must fall back to the bundled image for that state.
 - Only the active display mode should receive state updates.
 - Switching to `editor` should clear sidebar content, open/focus the editor `WebviewPanel`, and avoid closing the global VSCode Sidebar.
@@ -53,7 +55,7 @@ MCP project files are in `D:\IntegratedSourceOnDesktop\mcp-server`; check that r
 
 ## Webview UI Rules
 
-- The status area action bar contains reconnect, webview position toggle, action guide link, and GitHub link buttons.
+- The status area action bar contains reconnect, webview position toggle, image settings, action guide link, and GitHub link buttons.
 - Webview scripts should post commands to the extension host; external links must be opened with `vscode.env.openExternal`.
 - The webview page must not scroll.
 - The full image and all text must remain visible by dynamically sizing the image frame and scaling the image with its natural aspect ratio.

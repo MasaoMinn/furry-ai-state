@@ -67,7 +67,6 @@ type AgentState =
   | "planning"
   | "coding"
   | "testing"
-  | "debugging"
   | "success"
   | "error";
 ```
@@ -100,7 +99,6 @@ const stateImageMap = {
   planning: "thinking.png",
   coding: "building.png",
   testing: "building.png",
-  debugging: "building.png",
   error: "building.png",
   success: "completed.png"
 };
@@ -195,7 +193,7 @@ args = ['D:\IntegratedSourceOnDesktop\mcp-server\dist\index.js']
 codex mcp list
 ```
 
-项目级 `AGENTS.md` 已要求 Codex 在 `thinking`、`planning`、`coding`、`debugging`、`testing`、`success`、`error` 等阶段调用 `set_state`。这让 VSCode 插件 Webview 可以跟随 Codex 的工作状态切换插画。
+项目级 `AGENTS.md` 已要求 Codex 在 `thinking`、`planning`、`coding`、`testing`、`success`、`error` 等阶段调用 `set_state`。这让 VSCode 插件 Webview 可以跟随 Codex 的工作状态切换插画。
 
 ## 给 Agent 安装 MCP
 

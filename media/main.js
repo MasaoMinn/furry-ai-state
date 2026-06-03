@@ -24,6 +24,7 @@ const activeFile = document.querySelector("#active-file");
 const connectionLabel = document.querySelector("#connection-label");
 const reconnectButton = document.querySelector("#reconnect-button");
 const positionButton = document.querySelector("#position-button");
+const settingsButton = document.querySelector("#settings-button");
 const docsButton = document.querySelector("#docs-button");
 const githubButton = document.querySelector("#github-button");
 const statusRow = document.querySelector(".status-row");
@@ -175,6 +176,10 @@ reconnectButton?.addEventListener("click", () => {
 
 positionButton?.addEventListener("click", () => {
   vscode.postMessage({ command: "toggle-webview-position" });
+});
+
+settingsButton?.addEventListener("click", () => {
+  vscode.postMessage({ command: "open-image-settings" });
 });
 
 docsButton?.addEventListener("click", () => {

@@ -15,7 +15,6 @@ const stateImageMap: Record<AgentState, string> = {
   planning: "thinking.png",
   coding: "building.png",
   testing: "testing.png",
-  debugging: "testing.png",
   error: "error.png",
   success: "completed.png"
 };
@@ -26,7 +25,6 @@ const stateLabelMap: Record<AgentState, string> = {
   planning: "Planning",
   coding: "Coding",
   testing: "Testing",
-  debugging: "Debugging",
   success: "Success",
   error: "Error"
 };
@@ -42,9 +40,20 @@ const webviewPositions = ["sidebar", "editor"] as const;
 
 type WebviewPosition = (typeof webviewPositions)[number];
 type CustomImageConfig = Partial<Record<AgentState, string>>;
+type CustomImageStatus = "bundled" | "custom" | "missing";
+
+interface StateImageSetting {
+  state: AgentState;
+  label: string;
+  imageUri: string;
+  fallbackImageUri: string;
+  bundledImageUri: string;
+  customImagePath?: string;
+  customImageStatus: CustomImageStatus;
+}
 
 const actionUrlMap = {
-  docs: "https://kcnhl2uub4k0.feishu.cn/wiki/JJ3KwGjRQiem5TkdTBccLeKrnJe?from=from_copylink",
+  docs: "https://kcnhl2uub4k0.feishu.cn/wiki/OuBCwjPX7iBL9PkZOjccKvGQnGf?from=from_copylink",
   github: "https://github.com/MasaoMinn/furry-ai-state"
 } as const;
 
@@ -58,6 +67,8 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
   private sidebarWebviewDisposable: vscode.Disposable | null = null;
   private editorPanel: vscode.WebviewPanel | null = null;
   private editorPanelDisposables: vscode.Disposable[] = [];
+  private imageSettingsPanel: vscode.WebviewPanel | null = null;
+  private imageSettingsPanelDisposables: vscode.Disposable[] = [];
   private stateEvent: CompanionStateEvent = {
     type: "state",
     state: "idle"
@@ -130,62 +141,11 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     this.customImages = getConfiguredCustomImages();
     this.configureActiveWebviews();
     this.postCurrentState();
+    this.postImageSettings();
   }
 
   async customizeImagesFromCommand(): Promise<void> {
-    const selected = await vscode.window.showQuickPick(
-      [
-        {
-          label: "$(discard) Reset to bundled images",
-          description: "Clear all custom image paths",
-          action: "reset" as const
-        },
-        ...agentStates.map((state) => ({
-          label: `$(file-media) ${stateLabelMap[state]}`,
-          description: this.customImages[state] ?? "Using bundled image",
-          detail: `Set a local image for the ${state} state`,
-          action: "set" as const,
-          state
-        }))
-      ],
-      {
-        placeHolder: "Choose a state image to customize, or reset all",
-        title: "Furry AI State: Customize Images"
-      }
-    );
-
-    if (!selected) {
-      return;
-    }
-
-    if (selected.action === "reset") {
-      await this.updateCustomImages({});
-      void vscode.window.showInformationMessage(
-        "Furry AI State custom images reset to bundled images."
-      );
-      return;
-    }
-
-    const [imageUri] =
-      (await vscode.window.showOpenDialog({
-        canSelectFiles: true,
-        canSelectFolders: false,
-        canSelectMany: false,
-        filters: {
-          Images: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]
-        },
-        openLabel: `Use for ${stateLabelMap[selected.state]}`,
-        title: `Select ${stateLabelMap[selected.state]} Image`
-      })) ?? [];
-
-    if (!imageUri) {
-      return;
-    }
-
-    await this.updateCustomImages({
-      ...this.customImages,
-      [selected.state]: imageUri.fsPath
-    });
+    this.revealImageSettingsPanel();
   }
 
   updateState(event: CompanionStateEvent): void {
@@ -300,6 +260,42 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private revealImageSettingsPanel(): void {
+    if (this.imageSettingsPanel) {
+      this.imageSettingsPanel.reveal(vscode.ViewColumn.Active);
+      this.postImageSettings();
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      "furryAiState.imageSettings",
+      "Furry AI State Images",
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        localResourceRoots: this.getWebviewResourceRoots(),
+        retainContextWhenHidden: true
+      }
+    );
+
+    this.imageSettingsPanel = panel;
+    this.imageSettingsPanelDisposables = [
+      this.initializeImageSettingsWebview(panel.webview),
+      panel.onDidDispose(() => {
+        if (this.imageSettingsPanel === panel) {
+          this.imageSettingsPanel = null;
+          this.disposeImageSettingsPanelDisposables();
+        }
+      })
+    ];
+  }
+
+  private disposeImageSettingsPanelDisposables(): void {
+    for (const disposable of this.imageSettingsPanelDisposables.splice(0)) {
+      disposable.dispose();
+    }
+  }
+
   private ensureSidebarWebview(): void {
     if (!this.sidebarView || this.sidebarWebviewDisposable) {
       return;
@@ -374,6 +370,9 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       if (message.command === "toggle-webview-position") {
         void this.toggleWebviewPosition();
       }
+      if (message.command === "open-image-settings") {
+        this.revealImageSettingsPanel();
+      }
       if (message.command === "open-docs") {
         void this.openExternal("docs");
       }
@@ -381,6 +380,28 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
         void this.openExternal("github");
       }
     });
+  }
+
+  private initializeImageSettingsWebview(webview: vscode.Webview): vscode.Disposable {
+    this.configureWebview(webview);
+    webview.html = this.getImageSettingsHtml(webview);
+
+    return webview.onDidReceiveMessage(
+      (message: { command?: string; state?: unknown }) => {
+        if (message.command === "ready") {
+          this.postImageSettings();
+        }
+        if (message.command === "select-custom-image") {
+          void this.pickCustomImageFromSettings(message.state);
+        }
+        if (message.command === "reset-custom-image") {
+          void this.resetCustomImageFromSettings(message.state);
+        }
+        if (message.command === "reset-all-custom-images") {
+          void this.resetAllCustomImagesFromSettings();
+        }
+      }
+    );
   }
 
   private async openExternal(target: ActionTarget): Promise<void> {
@@ -408,6 +429,62 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     return true;
   }
 
+  private async pickCustomImageFromSettings(state: unknown): Promise<void> {
+    if (!isAgentStateValue(state)) {
+      return;
+    }
+
+    const [imageUri] =
+      (await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: {
+          Images: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]
+        },
+        openLabel: `Use for ${stateLabelMap[state]}`,
+        title: `Select ${stateLabelMap[state]} Image`
+      })) ?? [];
+
+    if (!imageUri) {
+      return;
+    }
+
+    await this.updateCustomImages({
+      ...this.customImages,
+      [state]: imageUri.fsPath
+    });
+  }
+
+  private async resetCustomImageFromSettings(state: unknown): Promise<void> {
+    if (!isAgentStateValue(state)) {
+      return;
+    }
+
+    const confirmed = await confirmReset(
+      `Reset the ${stateLabelMap[state]} image to the bundled image?`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    const { [state]: _removedImagePath, ...nextCustomImages } =
+      this.customImages;
+
+    await this.updateCustomImages(nextCustomImages);
+  }
+
+  private async resetAllCustomImagesFromSettings(): Promise<void> {
+    const confirmed = await confirmReset(
+      "Reset all custom state images to bundled images?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    await this.updateCustomImages({});
+  }
+
   private async updateCustomImages(customImages: CustomImageConfig): Promise<void> {
     await vscode.workspace
       .getConfiguration("furry-ai-state")
@@ -416,6 +493,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     this.customImages = customImages;
     this.configureActiveWebviews();
     this.postCurrentState();
+    this.postImageSettings();
   }
 
   private configureActiveWebviews(): void {
@@ -425,6 +503,10 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
 
     if (this.editorPanel) {
       this.configureWebview(this.editorPanel.webview);
+    }
+
+    if (this.imageSettingsPanel) {
+      this.configureWebview(this.imageSettingsPanel.webview);
     }
   }
 
@@ -498,16 +580,7 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
     state: AgentState,
     webview: vscode.Webview
   ): { imageUri: string; fallbackImageUri: string } {
-    const fallbackImageUri = webview
-      .asWebviewUri(
-        vscode.Uri.joinPath(
-          this.context.extensionUri,
-          "media",
-          "images",
-          stateImageMap[state]
-        )
-      )
-      .toString();
+    const fallbackImageUri = this.getBundledStateImageUri(state, webview);
     const customImagePath = this.customImages[state];
 
     if (!customImagePath || !isReadableFile(customImagePath)) {
@@ -521,6 +594,63 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
       imageUri: webview.asWebviewUri(vscode.Uri.file(customImagePath)).toString(),
       fallbackImageUri
     };
+  }
+
+  private getBundledStateImageUri(
+    state: AgentState,
+    webview: vscode.Webview
+  ): string {
+    return webview
+      .asWebviewUri(
+        vscode.Uri.joinPath(
+          this.context.extensionUri,
+          "media",
+          "images",
+          stateImageMap[state]
+        )
+      )
+      .toString();
+  }
+
+  private postImageSettings(): void {
+    if (!this.imageSettingsPanel) {
+      return;
+    }
+
+    const webview = this.imageSettingsPanel.webview;
+    this.configureWebview(webview);
+
+    void webview.postMessage({
+      command: "settings-update",
+      images: this.getImageSettings(webview)
+    });
+  }
+
+  private getImageSettings(webview: vscode.Webview): StateImageSetting[] {
+    return agentStates.map((state) => {
+      const { imageUri, fallbackImageUri } = this.getStateImageUris(
+        state,
+        webview
+      );
+      const customImagePath = this.customImages[state];
+      const hasReadableCustomImage =
+        !!customImagePath && isReadableFile(customImagePath);
+      const customImageStatus: CustomImageStatus = customImagePath
+        ? hasReadableCustomImage
+          ? "custom"
+          : "missing"
+        : "bundled";
+
+      return {
+        state,
+        label: stateLabelMap[state],
+        imageUri,
+        fallbackImageUri,
+        bundledImageUri: this.getBundledStateImageUri(state, webview),
+        ...(customImagePath ? { customImagePath } : {}),
+        customImageStatus
+      };
+    });
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -570,6 +700,12 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
                   <path d="m15 9 3 3-3 3" />
                 </svg>
               </button>
+              <button id="settings-button" class="icon-button" type="button" title="Customize state images" aria-label="Customize state images">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+                  <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z" />
+                </svg>
+              </button>
               <button id="docs-button" class="icon-button" type="button" title="Open furry action guide" aria-label="Open furry action guide">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -603,6 +739,40 @@ export class StateViewProvider implements vscode.WebviewViewProvider {
   </body>
 </html>`;
   }
+
+  private getImageSettingsHtml(webview: vscode.Webview): string {
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, "media", "settings.css")
+    );
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, "media", "settings.js")
+    );
+    const cspSource = webview.cspSource;
+
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource}; style-src ${cspSource}; script-src ${cspSource};" />
+    <link rel="stylesheet" href="${styleUri}" />
+    <title>Furry AI State Images</title>
+  </head>
+  <body>
+    <main class="settings-app">
+      <header class="settings-header">
+        <div>
+          <h1>State Images</h1>
+          <p>Preview and replace the illustration used by each agent state.</p>
+        </div>
+        <button id="reset-all-button" class="secondary-button" type="button">Reset all</button>
+      </header>
+      <section id="image-settings-list" class="image-settings-list" aria-live="polite"></section>
+    </main>
+    <script src="${scriptUri}"></script>
+  </body>
+</html>`;
+  }
 }
 
 function getConfiguredWebviewPosition(): WebviewPosition {
@@ -617,6 +787,13 @@ function isWebviewPosition(value: unknown): value is WebviewPosition {
   return (
     typeof value === "string" &&
     webviewPositions.includes(value as WebviewPosition)
+  );
+}
+
+function isAgentStateValue(value: unknown): value is AgentState {
+  return (
+    typeof value === "string" &&
+    agentStates.includes(value as AgentState)
   );
 }
 
@@ -653,4 +830,14 @@ function isSameStateEvent(
     left.message === right.message &&
     left.file === right.file
   );
+}
+
+async function confirmReset(message: string): Promise<boolean> {
+  const confirmed = await vscode.window.showWarningMessage(
+    message,
+    { modal: true },
+    "Reset"
+  );
+
+  return confirmed === "Reset";
 }

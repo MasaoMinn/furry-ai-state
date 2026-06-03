@@ -6,6 +6,10 @@
   "publisher": "tangetsu",
   "license": "MIT",
   "icon": "assets/logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MasaoMinn/furry-ai-state.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -99,7 +103,7 @@
       },
       {
         "command": "furry-ai-state.customizeImages",
-        "title": "Customize Images",
+        "title": "Customize Pictures",
         "category": "Furry AI State"
       }
     ]

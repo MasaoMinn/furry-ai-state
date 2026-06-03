@@ -4,7 +4,6 @@ export const agentStates = [
   "planning",
   "coding",
   "testing",
-  "debugging",
   "success",
   "error"
 ] as const;
