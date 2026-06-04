@@ -98,25 +98,25 @@ Webview 只负责渲染，不直接连接 IPC。`message` 用于显示 Agent 当
 
 ```ts
 const stateImageMap = {
-  idle: ["idle", "idle.png"],
-  thinking: ["thinking", "thinking.png"],
-  planning: ["planning", "planning.png"],
-  coding: ["coding", "coding.png"],
-  testing: ["testing", "testing.png"],
-  success: ["success", "success.png"],
-  error: ["error", "error.png"]
+  idle: ["idle", "idle-1.gif"],
+  thinking: ["thinking", "thinking-1.gif"],
+  planning: ["planning", "planning-1.gif"],
+  coding: ["coding", "coding-1.gif"],
+  testing: ["testing", "testing-1.gif"],
+  success: ["success", "success-1.gif"],
+  error: ["error", "error-1.gif"]
 };
 ```
 
 图片来源已重新复制到本项目：
 
-- `media/images/idle/idle.png`
-- `media/images/thinking/thinking.png`
-- `media/images/planning/planning.png`
-- `media/images/coding/coding.png`
-- `media/images/testing/testing.png`
-- `media/images/success/success.png`
-- `media/images/error/error.png`
+- `media/images/idle/idle-1.gif`
+- `media/images/thinking/thinking-1.gif`
+- `media/images/planning/planning-1.gif`
+- `media/images/coding/coding-1.gif`
+- `media/images/testing/testing-1.gif`
+- `media/images/success/success-1.gif`
+- `media/images/error/error-1.gif`
 
 每个状态目录可以放多个内置资源，例如 `idle-2.gif`。设置页会列出该状态目录下支持的图片资源，用户可以选择本机图片，也可以选择插件提供的 PNG/GIF 资源。插件提供的资源选项需要显示图片预览，并在用户点击选项后立即生效。
 

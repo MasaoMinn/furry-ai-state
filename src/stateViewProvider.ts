@@ -20,13 +20,13 @@ const supportedBundledImageExtensions = new Set([
 ]);
 
 const defaultStateImageMap: Record<AgentState, readonly [string, string]> = {
-  idle: ["idle", "idle.png"],
-  thinking: ["thinking", "thinking.png"],
-  planning: ["planning", "planning.png"],
-  coding: ["coding", "coding.png"],
-  testing: ["testing", "testing.png"],
-  error: ["error", "error.png"],
-  success: ["success", "success.png"]
+  idle: ["idle", "idle-1.gif"],
+  thinking: ["thinking", "thinking-1.gif"],
+  planning: ["planning", "planning-1.gif"],
+  coding: ["coding", "coding-1.gif"],
+  testing: ["testing", "testing-1.gif"],
+  error: ["error", "error-1.gif"],
+  success: ["success", "success-1.gif"]
 };
 
 const stateLabelMap: Record<AgentState, string> = {

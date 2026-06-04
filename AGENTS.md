@@ -35,13 +35,13 @@ MCP project files are in `D:\IntegratedSourceOnDesktop\mcp-server`; check that r
 
 - Supported states are `idle`, `thinking`, `planning`, `coding`, `testing`, `success`, and `error`.
 - Image mapping must stay stable:
-  - `idle` -> `media/images/idle/idle.png`
-  - `thinking` -> `media/images/thinking/thinking.png`
-  - `planning` -> `media/images/planning/planning.png`
-  - `coding` -> `media/images/coding/coding.png`
-  - `testing` -> `media/images/testing/testing.png`
-  - `success` -> `media/images/success/success.png`
-  - `error` -> `media/images/error/error.png`
+  - `idle` -> `media/images/idle/idle-1.gif`
+  - `thinking` -> `media/images/thinking/thinking-1.gif`
+  - `planning` -> `media/images/planning/planning-1.gif`
+  - `coding` -> `media/images/coding/coding-1.gif`
+  - `testing` -> `media/images/testing/testing-1.gif`
+  - `success` -> `media/images/success/success-1.gif`
+  - `error` -> `media/images/error/error-1.gif`
 - Preserve optional `message` and `file` end to end from IPC event to webview rendering.
 - Webview initialization and reconnect actions should reset the visible state to `idle` until a new IPC state event arrives; reconnect must track the last accepted agent state and ignore it if the IPC bridge immediately replays it.
 - When making changes related to MCP tools or the paired MCP server, explicitly report which MCP files or contracts changed.
